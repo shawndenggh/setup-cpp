@@ -1,0 +1,46 @@
+name: Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  install:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - ubuntu: '22.04'
+            mirror: https://archive.ubuntu.com/ubuntu
+          - ubuntu: '24.04'
+            mirror: https://mirrors.aliyun.com/ubuntu
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check shell scripts
+        run: |
+          bash -n setup.sh tests/install.sh
+          shellcheck setup.sh tests/install.sh
+      - name: Test cold installation and reuse
+        env:
+          UBUNTU_VERSION: ${{ matrix.ubuntu }}
+          MIRROR: ${{ matrix.mirror }}
+        run: bash tests/install.sh "$UBUNTU_VERSION" "$MIRROR"
+      - uses: ./
+      - name: Verify Go race support
+        env:
+          CGO_ENABLED: '1'
+        run: |
+          test "$CC" = gcc
+          test "$CXX" = g++
+          work_dir="$(mktemp -d)"
+          trap 'rm -rf "$work_dir"' EXIT
+          cd "$work_dir"
+          go mod init example.com/toolchain-check
+          printf 'package toolchain\nimport "testing"\nfunc TestToolchain(t *testing.T) {}\n' > toolchain_test.go
+          go test -race ./...
