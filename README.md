@@ -7,7 +7,7 @@ Install Ubuntu's default GCC, G++, make and C/C++ development headers. Configure
 ```yaml
 - name: Set up C/C++
   uses: shawndenggh/setup-cpp@v1
-  timeout-minutes: 8
+  timeout-minutes: 12
   with:
     mirror: https://mirrors.aliyun.com/ubuntu
 ```
@@ -37,7 +37,7 @@ This action does not change npm/Bun registries or caches. Mirror performance dep
 ```yaml
 - uses: actions/checkout@v4
 - uses: shawndenggh/setup-cpp@v1
-  timeout-minutes: 8
+  timeout-minutes: 12
   with:
     mirror: https://mirrors.aliyun.com/ubuntu
 - uses: actions/setup-go@v5
