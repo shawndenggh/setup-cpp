@@ -18,8 +18,16 @@ jobs:
         include:
           - ubuntu: '22.04'
             mirror: https://archive.ubuntu.com/ubuntu
+            make_only: 'false'
           - ubuntu: '24.04'
             mirror: https://mirrors.aliyun.com/ubuntu
+            make_only: 'false'
+          - ubuntu: '22.04'
+            mirror: https://archive.ubuntu.com/ubuntu
+            make_only: 'true'
+          - ubuntu: '24.04'
+            mirror: https://mirrors.aliyun.com/ubuntu
+            make_only: 'true'
     steps:
       - uses: actions/checkout@v4
       - name: Check shell scripts
@@ -30,9 +38,13 @@ jobs:
         env:
           UBUNTU_VERSION: ${{ matrix.ubuntu }}
           MIRROR: ${{ matrix.mirror }}
-        run: bash tests/install.sh "$UBUNTU_VERSION" "$MIRROR"
+          MAKE_ONLY: ${{ matrix.make_only }}
+        run: bash tests/install.sh "$UBUNTU_VERSION" "$MIRROR" "$MAKE_ONLY"
       - uses: ./
+        with:
+          make-only: ${{ matrix.make_only }}
       - name: Verify Go race support
+        if: matrix.make_only == 'false'
         env:
           CGO_ENABLED: '1'
         run: |

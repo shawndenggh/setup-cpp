@@ -11,6 +11,12 @@ fail() {
 source /etc/os-release
 [[ "$ID" == ubuntu && -n "${VERSION_CODENAME:-}" ]] || fail 'setup-cpp requires Ubuntu with VERSION_CODENAME.'
 
+case "${SETUP_CPP_MAKE_ONLY:-false}" in
+  false) package=build-essential ;;
+  true) package=make ;;
+  *) fail 'make-only must be true or false.' ;;
+esac
+
 mirror="${SETUP_CPP_MIRROR:-}"
 mirror="${mirror%/}"
 if [[ -n "$mirror" && ! "$mirror" =~ ^https?://[a-zA-Z0-9.-]+(:[0-9]+)?(/[a-zA-Z0-9._~/-]+)?$ ]]; then
@@ -22,7 +28,7 @@ trap 'rm -rf "$work_dir"' EXIT
 # APT's unprivileged download user needs to read the temporary source file.
 chmod 755 "$work_dir"
 
-if [[ "$(dpkg-query -W -f='${Status}' build-essential 2>/dev/null || true)" != 'install ok installed' ]]; then
+if [[ "$(dpkg-query -W -f='${Status}' "$package" 2>/dev/null || true)" != 'install ok installed' ]]; then
   root=()
   if (( EUID != 0 )); then
     command -v sudo >/dev/null || fail 'Installing packages requires root or passwordless sudo.'
@@ -52,19 +58,25 @@ EOF
       -o Dir::Etc::sourceparts=-
       -o APT::Get::List-Cleanup=0
     )
-    echo "Installing build-essential from $mirror ($VERSION_CODENAME)."
+    echo "Installing $package from $mirror ($VERSION_CODENAME)."
   else
-    echo 'Installing build-essential using the runner APT sources.'
+    echo "Installing $package using the runner APT sources."
   fi
   "${root[@]}" apt-get "${apt_options[@]}" update
-  "${root[@]}" env DEBIAN_FRONTEND=noninteractive apt-get "${apt_options[@]}" install --yes --no-install-recommends build-essential
+  "${root[@]}" env DEBIAN_FRONTEND=noninteractive apt-get "${apt_options[@]}" install --yes --no-install-recommends "$package"
 else
-  echo 'build-essential is already installed; skipping APT downloads.'
+  echo "$package is already installed; skipping APT downloads."
+fi
+
+make --version
+printf 'check:\n\t@echo "make OK"\n' > "$work_dir/Makefile"
+make --no-print-directory -f "$work_dir/Makefile" check
+if [[ "$package" == make ]]; then
+  exit 0
 fi
 
 gcc --version
 g++ --version
-make --version
 printf '#include <stdio.h>\nint main(void) { return puts("C toolchain OK") < 0; }\n' > "$work_dir/check.c"
 printf '#include <iostream>\nint main() { std::cout << "C++ toolchain OK\\n"; }\n' > "$work_dir/check.cpp"
 gcc "$work_dir/check.c" -o "$work_dir/check-c"

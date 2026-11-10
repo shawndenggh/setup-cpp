@@ -17,6 +17,18 @@ Install Ubuntu's default GCC, G++, make and C/C++ development headers. Configure
 | Input | Default | Description |
 | --- | --- | --- |
 | `mirror` | empty | Full Ubuntu archive URL. Empty uses the runner's existing APT sources. |
+| `make-only` | `false` | Set to `true` to install only make. Does not install compilers/headers or set `CC`/`CXX`. |
+
+For workflows that only use a Makefile:
+
+```yaml
+- name: Set up make
+  uses: shawndenggh/setup-cpp@v1
+  timeout-minutes: 5
+  with:
+    mirror: https://mirrors.aliyun.com/ubuntu
+    make-only: true
+```
 
 For Aliyun, use `https://mirrors.aliyun.com/ubuntu` on x86_64 or `https://mirrors.aliyun.com/ubuntu-ports` on ARM64. An internal mirror is also supported. The archive must provide the runner's Ubuntu codename, updates and security suites. For non-Alibaba-Cloud hosts, use the public mirror domain, not the ECS-only internal endpoint.
 
@@ -24,10 +36,10 @@ Requires Ubuntu, Bash, and root or passwordless sudo for installation. HTTPS mir
 
 ## Behavior
 
-- Installs `build-essential` and required dependencies with `--no-install-recommends`.
+- Installs `build-essential` (or only `make` with `make-only: true`) and required dependencies with `--no-install-recommends`.
 - With `mirror`, uses a temporary Deb822 source file and excludes other repositories, including PPAs. Does not rewrite `/etc/apt` and retains Ubuntu archive signature verification.
-- Skips APT when `build-essential` is already installed, while still compiling and running C/C++ smoke checks.
-- Exports `CC=gcc` and `CXX=g++` to subsequent steps.
+- Skips APT when the selected package is already installed. Always runs a make recipe; full toolchain mode also compiles and runs C/C++ smoke checks.
+- In full toolchain mode, exports `CC=gcc` and `CXX=g++` to subsequent steps. Make-only mode leaves compiler environment variables unchanged.
 - Uses 30-second APT network timeouts, two retries, and fails on index download errors. Use the calling step's `timeout-minutes` to bound the entire operation.
 
 This action does not change npm/Bun registries or caches. Mirror performance depends on the runner's network.
@@ -51,6 +63,8 @@ This action does not change npm/Bun registries or caches. Mirror performance dep
 ## Development
 
 Run `bash tests/install.sh 24.04 https://mirrors.aliyun.com/ubuntu` on an x86_64 Docker host. On ARM64, pass an `ubuntu-ports` mirror instead. Tests cover cold installation, failed mirror handling, input validation, system source preservation, and reuse without root or network access. The default test mirror is the official x86_64 Ubuntu archive.
+
+Pass `true` as the third argument to test make-only mode. It additionally verifies that compilers and C headers are absent and the environment file is unchanged.
 
 Released versions use semantic version tags such as `v1.0.0`; `v1` is the major-version entry point. Pin a release commit SHA when immutable references are required.
 
