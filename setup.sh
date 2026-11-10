@@ -12,8 +12,8 @@ source /etc/os-release
 [[ "$ID" == ubuntu && -n "${VERSION_CODENAME:-}" ]] || fail 'setup-cpp requires Ubuntu with VERSION_CODENAME.'
 
 case "${SETUP_CPP_MAKE_ONLY:-false}" in
-  false) package=build-essential ;;
-  true) package=make ;;
+  false) package='build-essential' ;;
+  true) package='make' ;;
   *) fail 'make-only must be true or false.' ;;
 esac
 
